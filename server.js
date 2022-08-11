@@ -1,14 +1,21 @@
 
-
+const { createServer } = require("http");
 const express = require('express')
 const expressGraphQL = require('express-graphql')
-
 const cors = require('cors')
-
 const {GraphQLSchema,GraphQLObjectType,GraphQLString,GraphQLList,
-  GraphQLInt,GraphQLNonNull} = require('graphql')
+  GraphQLInt,GraphQLNonNull,execute,subscribe} = require('graphql')
 
-const app = express()
+const {PubSub} = require('graphql-subscriptions')
+const { SubscriptionServer } = require("subscriptions-transport-ws");
+const { ApolloServer} = require("apollo-server-express");
+
+
+(async () => {
+  const PORT = 5000;
+  const pubsub = new PubSub();
+  const app = express()
+  const httpServer = createServer(app);
 
 const authors = [
 	{ id: 1, name: 'Hans Christian Andersen' },
@@ -103,6 +110,19 @@ const RootMutationType = new GraphQLObjectType({
   name: 'Mutation',
   description: 'Root Mutation',
   fields: () => ({
+    addAuthor: {
+      type: AuthorType,
+      description: 'Dodaj autora',
+      args: {
+        name: { type: GraphQLNonNull(GraphQLString) }
+      },
+      resolve: (parent, args) => {
+        const author = { id: authors.length + 1, name: args.name}
+        authors.push(author)
+        pubsub.publish("NEW_AUTHOR", { AuthorAdded: author });
+        return author
+      }
+    },
     addBook: {
       type: BookType,
       description: 'Dodaj knjigu',
@@ -111,21 +131,11 @@ const RootMutationType = new GraphQLObjectType({
         authorId: { type: GraphQLNonNull(GraphQLInt) }
       },
       resolve: (parent, args) => {
-        const book = { id: books.length + 1, name: args.name, authorId: args.authorId }
+        const book = { id: books.length + 1, name: args.name, 
+          authorId: args.authorId, year:0,genre:"Žanr" }
         books.push(book)
+        pubsub.publish("NEW_BOOK", { BookAdded: book });
         return book
-      }
-    },
-    addAuthor: {
-      type: AuthorType,
-      description: 'Dodaj autora',
-      args: {
-        name: { type: GraphQLNonNull(GraphQLString) }
-      },
-      resolve: (parent, args) => {
-        const author = { id: authors.length + 1, name: args.name }
-        authors.push(author)
-        return author
       }
     },
     removeBook: {
@@ -201,13 +211,19 @@ const RootSubscriptionType = new GraphQLObjectType({
   name: 'Subscription',
   description: 'Root Subscription',
   fields: () => ({
-    postAuthor: {
-          type: AuthorType,
-          subscribe: () => authors
+    AuthorAdded: {
+      type: AuthorType,
+      description: 'update autori',      
+      subscribe: () => pubsub.asyncIterator(["NEW_AUTHOR"])
+
+    },
+    BookAdded: {
+      type: BookType,
+      description: 'update knjige',      
+      subscribe: () => pubsub.asyncIterator(["NEW_BOOK"])
+
     }
-
   })
-
 })
 
 const schema = new GraphQLSchema({
@@ -215,9 +231,26 @@ const schema = new GraphQLSchema({
   mutation: RootMutationType,
   subscription: RootSubscriptionType
 })
+const server = new ApolloServer({
+  schema,
+});
+await server.start();
+server.applyMiddleware({ app });
 app.use(cors())
 app.use('/graphql', expressGraphQL({
   schema: schema,
   graphiql: true
 }))
-app.listen(5000, () => console.log('Sve ispravno'))
+SubscriptionServer.create(
+  { schema, execute, subscribe },
+  { server: httpServer, path: server.graphqlPath }
+);
+httpServer.listen(PORT, () => {
+  console.log(
+    `Postavljanje upita na http://localhost:${PORT}${server.graphqlPath}`
+  );
+  console.log(
+    `Pretplate su dostupne na ws://localhost:${PORT}${server.graphqlPath}`
+  );
+});
+})();
