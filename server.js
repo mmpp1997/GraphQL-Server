@@ -16,6 +16,7 @@ const {
 const { PubSub } = require("graphql-subscriptions");
 const { SubscriptionServer } = require("subscriptions-transport-ws");
 const { ApolloServer } = require("apollo-server-express");
+const { randomBytes } = require("crypto");
 
 (async () => {
   const PORT = 5000;
@@ -32,7 +33,13 @@ const { ApolloServer } = require("apollo-server-express");
   ];
 
   const books = [
-    { id: 1, name: "Mala sirena", authorId: 1, year: 1837, genre: "bajka" },
+    { 
+      id: 1,
+      name: "Mala sirena",
+      authorId: 1, 
+      year: 1837, 
+      genre: "bajka" 
+    },
     {
       id: 2,
       name: "Djevojčica sa šibicama",
@@ -111,7 +118,6 @@ const { ApolloServer } = require("apollo-server-express");
       genre: "filozofski dramski roman",
     },
   ];
-
   const BookType = new GraphQLObjectType({
     name: "Book",
     description: "Knjiga tip",
@@ -190,7 +196,10 @@ const { ApolloServer } = require("apollo-server-express");
           name: { type: GraphQLNonNull(GraphQLString) },
         },
         resolve: (parent, args) => {
-          const author = { id: authors.length + 1, name: args.name };
+          const author = {
+            id: Math.floor(Math.random() * 1000) + 6,
+            name: args.name,
+          };
           authors.push(author);
           pubsub.publish("NEW_AUTHOR", { AuthorAdded: author });
           return author;
@@ -205,7 +214,7 @@ const { ApolloServer } = require("apollo-server-express");
         },
         resolve: (parent, args) => {
           const book = {
-            id: books.length + 1,
+            id: Math.floor(Math.random() * 1000) + 13,
             name: args.name,
             authorId: args.authorId,
             year: 0,
