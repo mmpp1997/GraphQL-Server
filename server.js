@@ -16,7 +16,6 @@ const {
 const { PubSub } = require("graphql-subscriptions");
 const { SubscriptionServer } = require("subscriptions-transport-ws");
 const { ApolloServer } = require("apollo-server-express");
-const { randomBytes } = require("crypto");
 
 (async () => {
   const PORT = 5000;
