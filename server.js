@@ -1,8 +1,8 @@
-const { createServer } = require("http");
-const express = require("express");
-const expressGraphQL = require("express-graphql");
-const cors = require("cors");
-const {
+import {createServer} from "http";
+import express from "express";
+import expressGraphQL from "express-graphql";
+import cors from "cors";
+import {
   GraphQLSchema,
   GraphQLObjectType,
   GraphQLString,
@@ -11,11 +11,10 @@ const {
   GraphQLNonNull,
   execute,
   subscribe,
-} = require("graphql");
-
-const { PubSub } = require("graphql-subscriptions");
-const { SubscriptionServer } = require("subscriptions-transport-ws");
-const { ApolloServer } = require("apollo-server-express");
+} from "graphql";
+import { PubSub } from "graphql-subscriptions";
+import {SubscriptionServer} from "subscriptions-transport-ws";
+import {ApolloServer} from "apollo-server-express";
 
 (async () => {
   const PORT = 5000;
